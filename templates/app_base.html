@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, brand %}
+{% block body %}
+<div style="min-height:100vh">
+  <header class="app-header">
+    <div class="inner">
+      {{ brand() }}
+      <nav class="nav">
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">{{ icon('dash') }}<span class="lbl">Dashboard</span></a>
+        <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">{{ icon('user') }}<span class="lbl">Profile</span></a>
+        {% if me and me['is_admin'] %}
+        <a href="{{ url_for('admin') }}" class="{{ 'active' if request.endpoint == 'admin' }}">{{ icon('shield') }}<span class="lbl">Admin</span></a>
+        {% endif %}
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <button class="navbtn" type="submit">{{ icon('logout') }}<span class="lbl">Sign out</span></button>
+        </form>
+      </nav>
+    </div>
+  </header>
+  {% block content %}{% endblock %}
+</div>
+{% endblock %}

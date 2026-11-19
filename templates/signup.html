@@ -1,0 +1,27 @@
+{% extends "auth_base.html" %}
+{% from "_macros.html" import pw_input, checklist, social %}
+{% block title %}Create your account — finova{% endblock %}
+{% block desc %}Create a free finova account to track income, expenses and savings goals.{% endblock %}
+{% block auth_content %}
+<div class="rise-in">
+  <h1 class="auth-title">Create your account</h1>
+  <p class="text-muted mt-2">A few details and your ledger is ready.</p>
+  <form method="post" action="{{ url_for('signup') }}" class="mt-6" id="signup-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <div class="field"><label class="label" for="full_name">Full name</label>
+      <input class="input" id="full_name" name="full_name" autocomplete="name" placeholder="Priya Sharma" value="{{ full_name or '' }}"></div>
+    <div class="field"><label class="label" for="email">Email address</label>
+      <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="you@gmail.com" value="{{ email or '' }}"></div>
+    <div class="field"><label class="label" for="password">Password</label>{{ pw_input('password', autocomplete='new-password') }}</div>
+    <div class="field"><label class="label" for="confirm">Confirm password</label>{{ pw_input('confirm', name='confirm', autocomplete='new-password') }}</div>
+    {{ checklist(True) }}
+    <button type="submit" class="btn btn-xl btn-block" id="submit-btn" disabled>Create Account</button>
+  </form>
+  <div class="divider"><span></span> or <span></span></div>
+  {{ social() }}
+  <p class="text-sm text-muted mt-8" style="text-align:center">Already have an account? <a href="{{ url_for('auth') }}" class="link-maroon">Sign in</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>FinovaPasswordForm({ password: '#password', confirm: '#confirm', button: '#submit-btn' });</script>
+{% endblock %}

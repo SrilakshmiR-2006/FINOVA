@@ -1,0 +1,50 @@
+{% extends "auth_base.html" %}
+{% from "_macros.html" import icon, pw_input, social %}
+{% block title %}Sign in — finova{% endblock %}
+{% block auth_content %}
+<div class="rise-in">
+  <h1 class="auth-title">Welcome!</h1>
+  <p class="text-muted mt-2">Sign in to open your finova ledger.</p>
+
+  {% set mode = mode or 'user' %}
+  <div class="seg" role="tablist">
+    <button type="button" role="tab" data-mode="user" class="{{ 'on' if mode == 'user' }}">{{ icon('user') }} User</button>
+    <button type="button" role="tab" data-mode="admin" class="{{ 'on' if mode == 'admin' }}">{{ icon('shield') }} Admin</button>
+  </div>
+
+  <form method="post" action="{{ url_for('auth') }}" class="mt-6" id="signin-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="mode" id="mode" value="{{ mode }}">
+    <div class="field">
+      <label class="label" for="email">Email</label>
+      <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="you@gmail.com" value="{{ email or '' }}">
+    </div>
+    <div class="field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.375rem">
+        <label class="label" for="password" style="margin:0">Password</label>
+        <a href="{{ url_for('forgot_password') }}" class="link-maroon text-xs">Forgot password?</a>
+      </div>
+      {{ pw_input('password', placeholder='••••••••') }}
+    </div>
+    <button type="submit" class="btn btn-xl btn-block" id="submit-btn">{{ 'Sign in as admin' if mode == 'admin' else 'Sign in' }}</button>
+  </form>
+
+  <div id="social" class="{{ 'hidden' if mode == 'admin' }}">
+    <div class="divider"><span></span> or <span></span></div>
+    {{ social() }}
+  </div>
+
+  <p class="text-sm text-muted mt-8" style="text-align:center">New to finova? <a href="{{ url_for('signup') }}" class="link-maroon">Create an account</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    const m = b.dataset.mode;
+    document.getElementById('mode').value = m;
+    document.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('submit-btn').textContent = m === 'admin' ? 'Sign in as admin' : 'Sign in';
+    document.getElementById('social').classList.toggle('hidden', m === 'admin');
+  }));
+</script>
+{% endblock %}

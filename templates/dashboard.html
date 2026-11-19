@@ -1,0 +1,85 @@
+{% extends "app_base.html" %}
+{% from "_macros.html" import dollars, icon %}
+{% block title %}Dashboard — finova{% endblock %}
+{% block desc %}Your balance, income, expenses, savings and finance score at a glance.{% endblock %}
+{% block content %}
+<main class="page">
+  <div class="head-row">
+    <div>
+      <p class="eyebrow" id="today-label"></p>
+      <h1 class="page-title">Hello, <span id="first-name"></span>.</h1>
+    </div>
+    <a id="complete-profile" class="chip-link hidden" href="{{ url_for('profile') }}">Complete your profile to set a savings goal →</a>
+  </div>
+
+  <div class="grid grid-dash">
+    <div class="span-2">
+      <section class="ledger-card balance">
+        {{ dollars('cream') }}
+        <div class="z">
+          <div class="cap">{{ icon('wallet') }} Total balance</div>
+          <p class="big" id="balance"></p>
+          <p class="sub">plus <span class="text-sky" style="font-weight:600" id="all-saving"></span> tucked into savings</p>
+          <div class="three">
+            <div><p>Income · month</p><p id="m-income"></p></div>
+            <div><p>Spent · month</p><p id="m-expense"></p></div>
+            <div><p>Saved · month</p><p id="m-saving"></p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <section class="paper-card panel" id="score-panel"></section>
+
+    <section class="paper-card panel stat" id="stat-income"></section>
+    <section class="paper-card panel stat" id="stat-expense"></section>
+    <section class="paper-card panel stat" id="stat-saving"></section>
+
+    <div class="span-2">
+      <section class="paper-card panel" style="min-height:360px;height:100%">
+        <div class="panel-head">
+          <h2>Income &amp; expenses</h2>
+          <div class="tabs" id="range-tabs">
+            <button data-r="today">Today</button><button data-r="month" class="on">Month</button><button data-r="all">Complete</button>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="trend"></canvas></div>
+      </section>
+    </div>
+    <section class="paper-card panel">
+      <div class="panel-head"><h2>Expenses by category</h2><span class="text-xs text-muted">This month</span></div>
+      <div id="pie-wrap"></div>
+    </section>
+
+    <section class="paper-card panel">
+      <div class="panel-head"><h2>Calendar</h2><span class="text-xs text-muted">Dots mark activity</span></div>
+      <div class="cal" id="calendar"></div>
+    </section>
+    <section class="paper-card panel" id="day-panel"></section>
+    <section class="paper-card panel" id="savings-panel"></section>
+  </div>
+</main>
+
+<div class="overlay" id="txn-overlay">
+  <div class="dialog" role="dialog" aria-modal="true">
+    <button class="x" type="button" id="dlg-close" aria-label="Close">✕</button>
+    <h2 id="dlg-title"></h2>
+    <p class="desc">Amounts are in US dollars.</p>
+    <form id="txn-form" novalidate>
+      <div class="field"><label class="label" for="t-amount">Amount ($)</label>
+        <input class="input" id="t-amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="font-size:1.125rem"></div>
+      <div class="two field">
+        <div><label class="label" for="t-cat">Category</label><select class="input" id="t-cat"></select></div>
+        <div><label class="label" for="t-date">Date</label><input class="input" id="t-date" type="date"></div>
+      </div>
+      <div class="field"><label class="label" for="t-note">Note (optional)</label>
+        <input class="input" id="t-note" maxlength="200" placeholder="e.g. Groceries at the market"></div>
+      <button type="submit" class="btn btn-lg btn-block" id="dlg-submit"></button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>window.__PROFILE__ = {{ profile | tojson }}; window.__CATEGORIES__ = {{ categories | tojson }};</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

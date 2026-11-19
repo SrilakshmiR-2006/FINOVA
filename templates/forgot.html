@@ -1,0 +1,28 @@
+{% extends "auth_base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Reset your password — finova{% endblock %}
+{% block auth_content %}
+<div class="rise-in">
+  <a href="{{ url_for('auth') }}" class="link-maroon text-sm" style="display:inline-flex;align-items:center;gap:.25rem">
+    <span style="width:1rem;height:1rem;display:inline-block">{{ icon('back') }}</span> Back to sign in</a>
+  {% if sent %}
+  <div class="paper-card center-card mt-6">
+    <span class="ico">{{ icon('mailcheck') }}</span>
+    <h1 class="auth-title mt-4" style="font-size:1.875rem">Check your email</h1>
+    <p class="text-muted mt-3">If an account exists for <strong class="text-ink">{{ email }}</strong>, a reset link is on its way. Open it to choose a new password.</p>
+    {% if dev_link %}
+    <p class="text-xs text-muted mt-4" style="word-break:break-all">Dev mode (no mail server): <a class="link-maroon" href="{{ dev_link }}">{{ dev_link }}</a></p>
+    {% endif %}
+  </div>
+  {% else %}
+  <h1 class="auth-title mt-6">Forgot password?</h1>
+  <p class="text-muted mt-2">Enter your email and we'll send a link to reset it.</p>
+  <form method="post" action="{{ url_for('forgot_password') }}" class="mt-6">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <div class="field"><label class="label" for="email">Email</label>
+      <input class="input" id="email" name="email" type="email" placeholder="you@gmail.com"></div>
+    <button type="submit" class="btn btn-xl btn-block">Send reset link</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

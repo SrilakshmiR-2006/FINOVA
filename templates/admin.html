@@ -1,0 +1,45 @@
+{% extends "app_base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Admin overview — finova{% endblock %}
+{% block desc %}Admin overview of all finova users and their totals.{% endblock %}
+{% block content %}
+<main class="page">
+{% if not allowed %}
+  <div class="paper-card center-card" style="max-width:28rem;margin:0 auto">
+    <span class="text-maroon" style="display:block;width:2.5rem;height:2.5rem;margin:0 auto">{{ icon('alert') }}</span>
+    <h1 class="text-maroon mt-4" style="font-size:1.5rem">Admins only</h1>
+    <p class="text-muted mt-2">Your account doesn't have admin access.</p>
+    <a class="btn mt-6" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+  </div>
+{% else %}
+  <h1 class="page-title" style="font-size:2.25rem;margin:0">Admin overview</h1>
+  <p class="text-muted mt-1">Every finova account and its totals.</p>
+  <div class="kpis">
+    <div class="ledger-card"><span class="text-sky" style="display:block;width:1.25rem;height:1.25rem">{{ icon('users') }}</span>
+      <p class="text-sm mt-3" style="color:color-mix(in oklab,var(--cream) 70%,transparent)">Users</p>
+      <p class="font-display" style="font-size:1.875rem;font-weight:600">{{ rows | length }}</p></div>
+    {% for label, key, cls in [('Total income','income','text-income'),('Total expenses','expense','text-expense'),('Total savings','saving','text-saving')] %}
+    <div class="paper-card"><p class="text-sm text-muted">{{ label }}</p>
+      <p class="font-display {{ cls }} mt-2" style="font-size:1.5rem;font-weight:600">{{ '${:,.2f}'.format(sums[key]) }}</p></div>
+    {% endfor %}
+  </div>
+  <div class="paper-card table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Savings</th><th class="r">Score (month)</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="text-ink" style="font-weight:600">{{ r.name or '—' }}</td>
+          <td class="text-muted">{{ r.email }}</td>
+          <td class="r tabular text-income">{{ '${:,.2f}'.format(r.all.income) }}</td>
+          <td class="r tabular text-expense">{{ '${:,.2f}'.format(r.all.expense) }}</td>
+          <td class="r tabular text-saving">{{ '${:,.2f}'.format(r.all.saving) }}</td>
+          <td class="r text-maroon" style="font-weight:600">{{ r.score if r.has_income else '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+</main>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "auth_base.html" %}
+{% from "_macros.html" import pw_input, checklist %}
+{% block title %}Choose a new password — finova{% endblock %}
+{% block auth_content %}
+<div class="rise-in">
+  <h1 class="auth-title">New password</h1>
+  {% if ready %}
+  <form method="post" action="{{ url_for('reset_password') }}" class="mt-6">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="field"><label class="label" for="password">New password</label>{{ pw_input('password', autocomplete='new-password') }}</div>
+    <div class="field"><label class="label" for="confirm">Confirm password</label>{{ pw_input('confirm', name='confirm', autocomplete='new-password') }}</div>
+    {{ checklist(True) }}
+    <button type="submit" class="btn btn-xl btn-block" id="submit-btn" disabled>Update password</button>
+  </form>
+  {% else %}
+  <p class="text-muted mt-3">Open this page from the reset link in your email to choose a new password.</p>
+  <a class="btn btn-lg mt-6" href="{{ url_for('forgot_password') }}">Request a new link</a>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% if ready %}<script>FinovaPasswordForm({ password: '#password', confirm: '#confirm', button: '#submit-btn' });</script>{% endif %}
+{% endblock %}

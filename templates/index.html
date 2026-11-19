@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, brand, dollars, flipnote, logo_img %}
+{% block title %}finova — Finance analytics for reporting & budgets{% endblock %}
+{% block body %}
+<div class="landing">
+  {{ dollars() }}
+  <header class="top">
+    {{ brand() }}
+    <div class="actions">
+      {% if me %}
+        <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Dashboard</a>
+      {% else %}
+        <a class="btn btn-ghost" href="{{ url_for('auth') }}">Sign in</a>
+        <a class="btn" href="{{ url_for('signup') }}">Create account</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="rise-in">
+      <span class="pill"><i></i> Finance analytics</span>
+      <h1>Your money,<br><em>on one calm page.</em></h1>
+      <p class="lead">finova keeps your financial reporting and budget tracking in a single ledger — log income and expenses, follow your savings goal, and see where every dollar goes.</p>
+      <div class="cta">
+        <a class="btn btn-xl" href="{{ url_for('signup') }}">Get started free</a>
+        <a class="btn btn-xl btn-outline" href="{{ url_for('auth') }}">I have an account</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      {{ logo_img('logo') }}
+      <div style="position:absolute;left:-2rem;bottom:2.5rem">{{ flipnote(100, -10) }}</div>
+      <div style="position:absolute;right:-1rem;top:1.5rem">{{ flipnote(20, 8, 2) }}</div>
+      <div class="coin" style="position:absolute;top:-.5rem;left:2.5rem">$</div>
+    </div>
+  </section>
+
+  <section class="features">
+    {% for ic, t, d in [('bar','Clear reports','Income and expense graphs for today, this month and all time.'),('piggy','Savings goals','Set a savings percentage and watch each category grow.'),('cal','Daily ledger','A calendar of every transaction, one tap away.'),('shield','Finance score','A single number that tells you how healthy your month is.')] %}
+    <div class="paper-card feature rise-in" style="--delay:{{ 0.1 * loop.index0 + 0.2 }}s">
+      <span class="ico">{{ icon(ic) }}</span>
+      <h3>{{ t }}</h3>
+      <p>{{ d }}</p>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

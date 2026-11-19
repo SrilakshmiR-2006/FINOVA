@@ -1,0 +1,11 @@
+{% extends "auth_base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Account created — finova{% endblock %}
+{% block auth_content %}
+<div class="paper-card center-card rise-in">
+  <span class="ico">{{ icon('mailcheck') }}</span>
+  <h1 class="auth-title mt-4" style="font-size:1.875rem">Account created</h1>
+  <p class="text-muted mt-3">Your account for <strong class="text-ink">{{ sent_to }}</strong> is ready. Sign in to open your ledger.</p>
+  <a class="btn btn-lg mt-6" href="{{ url_for('auth') }}">Back to sign in</a>
+</div>
+{% endblock %}

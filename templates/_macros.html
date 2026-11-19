@@ -1,0 +1,78 @@
+{% macro icon(name) -%}
+{%- if name == 'dash' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+{%- elif name == 'user' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+{%- elif name == 'shield' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+{%- elif name == 'logout' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+{%- elif name == 'bar' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+{%- elif name == 'piggy' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
+{%- elif name == 'cal' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg>
+{%- elif name == 'up' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+{%- elif name == 'down' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10"/><path d="M17 7v10H7"/></svg>
+{%- elif name == 'wallet' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+{%- elif name == 'mail' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+{%- elif name == 'mailcheck' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="m16 19 2 2 4-4"/></svg>
+{%- elif name == 'back' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+{%- elif name == 'trash' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+{%- elif name == 'plus' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+{%- elif name == 'users' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+{%- elif name == 'alert' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+{%- elif name == 'chev-l' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+{%- elif name == 'chev-r' -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro mark() -%}
+<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#5C1A1B"/><circle cx="32" cy="32" r="26" fill="none" stroke="#7EC8E3" stroke-width="1.5" stroke-dasharray="2 3"/><text x="32" y="43" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="700" font-size="32" fill="#FAF6F0">F</text></svg>
+{%- endmacro %}
+
+{% macro brand(light=False) -%}
+<a href="{{ url_for('index') }}" class="brand {{ 'light' if light }}">
+  <span class="brand-mark">{{ mark() }}</span>
+  <span class="brand-name">finova</span>
+</a>
+{%- endmacro %}
+
+{% macro dollars(tone='maroon') -%}
+<div class="dollars {{ 'cream' if tone == 'cream' }}" aria-hidden="true">
+  {% for l, s, d, dl in [(6,28,14,0),(18,18,11,3),(31,36,16,6),(47,22,12,1.5),(62,30,15,8),(74,16,10,4),(86,34,17,2),(94,20,13,9)] %}
+  <span style="left:{{ l }}%;font-size:{{ s }}px;--dur:{{ d }}s;--delay:{{ dl }}s">$</span>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro flipnote(value, tilt=-6, delay=0, cls='') -%}
+<div aria-hidden="true" class="note {{ cls }}" style="--tilt:{{ tilt }}deg;--delay:{{ delay }}s;--dur:7s">
+  <div class="face front"><div class="in"><b>{{ value }}</b><span class="seal">$</span><b>{{ value }}</b></div></div>
+  <div class="face back"><div class="in"><b>FINOVA</b><small>{{ value }} dollars</small></div></div>
+</div>
+{%- endmacro %}
+
+{% macro logo_img(cls) -%}
+<img src="{{ url_for('static', filename='img/finova-logo.jpg') }}" alt="Finova logo" class="{{ cls }}"
+     onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/finova-logo.svg') }}'">
+{%- endmacro %}
+
+{% macro pw_input(id, name='password', autocomplete='current-password', placeholder='') -%}
+<div class="pw-wrap">
+  <input class="input" id="{{ id }}" name="{{ name }}" type="password" autocomplete="{{ autocomplete }}" placeholder="{{ placeholder }}">
+  <button type="button" class="pw-toggle" aria-label="Show password" data-toggle-pw="{{ id }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+</div>
+{%- endmacro %}
+
+{% macro checklist(with_confirm=True) -%}
+<ul class="checklist" id="pw-checklist" data-confirm="{{ 1 if with_confirm else 0 }}">
+  {% for r in password_rules %}<li data-rule="{{ r.id }}"><span class="dot">✕</span>{{ r.label }}</li>{% endfor %}
+  {% if with_confirm %}<li data-rule="match"><span class="dot">✕</span>Passwords match</li>{% endif %}
+</ul>
+{%- endmacro %}
+
+{% macro social() -%}
+<div style="display:grid;gap:.625rem">
+  <button type="button" class="btn btn-outline btn-google btn-block" data-social>
+    <svg viewBox="0 0 24 24" style="width:18px;height:18px"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+    Continue with Google
+  </button>
+</div>
+{%- endmacro %}
