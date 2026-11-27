@@ -12,6 +12,7 @@
     <a id="complete-profile" class="chip-link hidden" href="{{ url_for('profile') }}">Complete your profile to set a savings goal →</a>
   </div>
 
+  <div id="budget-alerts"></div>
   <div class="grid grid-dash">
     <div class="span-2">
       <section class="ledger-card balance">
@@ -56,6 +57,10 @@
     </section>
     <section class="paper-card panel" id="day-panel"></section>
     <section class="paper-card panel" id="savings-panel"></section>
+
+    <section class="paper-card panel" id="budget-panel"></section>
+    <section class="paper-card panel" id="portfolio-panel"></section>
+    <section class="paper-card panel" id="goals-panel"></section>
   </div>
 </main>
 
@@ -63,9 +68,9 @@
   <div class="dialog" role="dialog" aria-modal="true">
     <button class="x" type="button" id="dlg-close" aria-label="Close">✕</button>
     <h2 id="dlg-title"></h2>
-    <p class="desc">Amounts are in US dollars.</p>
+    <p class="desc">Amounts are in <span data-cur-code></span>.</p>
     <form id="txn-form" novalidate>
-      <div class="field"><label class="label" for="t-amount">Amount ($)</label>
+      <div class="field"><label class="label" for="t-amount">Amount (<span data-cur-sym></span>)</label>
         <input class="input" id="t-amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="font-size:1.125rem"></div>
       <div class="two field">
         <div><label class="label" for="t-cat">Category</label><select class="input" id="t-cat"></select></div>
@@ -74,6 +79,20 @@
       <div class="field"><label class="label" for="t-note">Note (optional)</label>
         <input class="input" id="t-note" maxlength="200" placeholder="e.g. Groceries at the market"></div>
       <button type="submit" class="btn btn-lg btn-block" id="dlg-submit"></button>
+    </form>
+  </div>
+</div>
+<div class="overlay" id="budget-overlay">
+  <div class="dialog" role="dialog" aria-modal="true">
+    <button class="x" type="button" id="budget-close" aria-label="Close">✕</button>
+    <h2>Set your budget</h2>
+    <p class="desc">Expense limits in <span data-cur-code></span>. Use 0 to turn a budget off. You'll get alerts at 80% and when you go over.</p>
+    <form id="budget-form" novalidate>
+      <div class="two field">
+        <div><label class="label" for="b-month">Monthly budget (<span data-cur-sym></span>)</label><input class="input" id="b-month" type="number" min="0" step="0.01"></div>
+        <div><label class="label" for="b-year">Yearly budget (<span data-cur-sym></span>)</label><input class="input" id="b-year" type="number" min="0" step="0.01"></div>
+      </div>
+      <button type="submit" class="btn btn-lg btn-block">Save budget</button>
     </form>
   </div>
 </div>

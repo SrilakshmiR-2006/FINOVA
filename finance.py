@@ -77,3 +77,72 @@ def age_from_dob(dob, today=None):
 def is_same_month(iso, ref):
     y, m, _ = (int(x) for x in iso.split("-"))
     return y == ref.year and m == ref.month
+
+
+# ---------------------------------------------------------------- investments
+ASSET_TYPES = ["Stocks", "Mutual Funds", "Gold", "Fixed Deposits", "Bonds", "Crypto",
+               "Real Estate", "Other"]
+
+
+def pct(part, whole):
+    return (part / whole * 100) if whole else 0.0
+
+
+def investment_metrics(inv):
+    """Per holding: invested = units x buy price, value = units x current price."""
+    invested = float(inv["quantity"]) * float(inv["buy_price"])
+    value = float(inv["quantity"]) * float(inv["current_price"])
+    pl = value - invested
+    return {"invested": round(invested, 2), "value": round(value, 2),
+            "pl": round(pl, 2), "return_pct": round(pct(pl, invested), 2)}
+
+
+def portfolio_summary(items):
+    """Overall return is weighted: total P/L / total invested (not an average of %s)."""
+    invested = value = 0.0
+    alloc = {}
+    for inv in items:
+        m = investment_metrics(inv)
+        invested += m["invested"]
+        value += m["value"]
+        alloc[inv["asset_type"]] = alloc.get(inv["asset_type"], 0.0) + m["value"]
+    pl = value - invested
+    allocation = [{"asset_type": k, "value": round(v, 2), "pct": round(pct(v, value), 2)}
+                  for k, v in sorted(alloc.items(), key=lambda kv: -kv[1])]
+    return {"invested": round(invested, 2), "value": round(value, 2), "pl": round(pl, 2),
+            "return_pct": round(pct(pl, invested), 2), "count": len(items),
+            "allocation": allocation}
+
+
+# ---------------------------------------------------------------- goals
+def goal_progress(target, saved):
+    target, saved = float(target), float(saved)
+    return {"saved": round(saved, 2), "remaining": round(max(0.0, target - saved), 2),
+            "pct": round(min(100.0, pct(saved, target)), 2), "completed": target > 0 and saved >= target}
+
+
+# ---------------------------------------------------------------- budgets
+def budget_status(spent, budget):
+    """Alert levels: none (no budget), ok (<80%), warn (80-100%), over (>100%)."""
+    spent, budget = float(spent), float(budget)
+    if budget <= 0:
+        return {"budget": 0, "spent": round(spent, 2), "remaining": 0, "pct": 0, "level": "none"}
+    used = pct(spent, budget)
+    level = "over" if spent > budget else "warn" if used >= 80 else "ok"
+    return {"budget": round(budget, 2), "spent": round(spent, 2),
+            "remaining": round(budget - spent, 2), "pct": round(used, 2), "level": level}
+
+
+# ---------------------------------------------------------------- currency
+BASE_CURRENCY = "USD"
+CURRENCIES = {"USD": "US Dollar", "INR": "Indian Rupee", "EUR": "Euro", "GBP": "British Pound",
+              "JPY": "Japanese Yen", "AED": "UAE Dirham", "CAD": "Canadian Dollar",
+              "AUD": "Australian Dollar", "SGD": "Singapore Dollar"}
+# Used only when live rates cannot be fetched (1 USD = x).
+FALLBACK_RATES = {"USD": 1.0, "INR": 83.5, "EUR": 0.92, "GBP": 0.79, "JPY": 150.0,
+                  "AED": 3.6725, "CAD": 1.36, "AUD": 1.52, "SGD": 1.34}
+
+
+def convert(amount, rate_from, rate_to):
+    """Convert between two currencies given their per-USD rates."""
+    return float(amount) / float(rate_from) * float(rate_to)

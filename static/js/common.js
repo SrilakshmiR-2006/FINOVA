@@ -29,10 +29,24 @@
     return data;
   };
 
-  const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-  const usdShort = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
-  window.formatMoney = n => usd.format(n);
-  window.formatMoneyShort = n => usdShort.format(n);
+  /* ---- currency: amounts are stored in USD and shown in the user's chosen currency ---- */
+  const C = window.__CURRENCY__ || { code: 'USD', rates: { USD: 1 } };
+  const rate = Number(C.rates[C.code]) || 1;
+  window.CUR = { code: C.code, rate, live: !!C.live, symbol: (0).toLocaleString('en', { style: 'currency', currency: C.code, maximumFractionDigits: 0 }).replace(/[\d\s.,]/g, '') };
+  const loc = C.code === 'INR' ? 'en-IN' : 'en-US';
+  const fmt = new Intl.NumberFormat(loc, { style: 'currency', currency: C.code });
+  const fmtShort = new Intl.NumberFormat(loc, { style: 'currency', currency: C.code, notation: 'compact', maximumFractionDigits: 1 });
+  window.formatMoney = n => fmt.format(Number(n) * rate);          // USD -> display currency
+  window.formatMoneyShort = n => fmtShort.format(Number(n) * rate);
+  window.toBase = v => Number(v) / rate;                            // display currency -> USD
+  window.fromBase = v => Math.round(Number(v) * rate * 100) / 100;  // USD -> display (for edit fields)
+  document.querySelectorAll('[data-cur-sym]').forEach(el => el.textContent = CUR.symbol || CUR.code);
+  document.querySelectorAll('[data-cur-code]').forEach(el => el.textContent = CUR.code);
+  const sel = document.getElementById('currency-select');
+  if (sel) sel.addEventListener('change', async () => {
+    try { await api('POST', '/api/currency', { currency: sel.value }); location.reload(); }
+    catch (e) { toast(e.message, 'error'); }
+  });
 
   window.toISODate = function (d) {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');

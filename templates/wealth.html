@@ -1,0 +1,252 @@
+{% extends "app_base.html" %}
+{% block title %}Investments & Goals — finova{% endblock %}
+{% block desc %}Track your investment portfolio, returns, asset allocation and financial goals.{% endblock %}
+{% block content %}
+<main class="page">
+  <div class="head-row">
+    <div><p class="eyebrow">Wealth</p><h1 class="page-title">Investments &amp; goals</h1></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn btn-sm" id="add-inv">+ Add investment</button>
+      <button class="btn btn-sm btn-outline" id="add-goal">+ New goal</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <section class="paper-card kpi"><p class="lbl">Total invested</p><p class="val" id="k-invested">—</p><p class="sub" id="k-count"></p></section>
+    <section class="paper-card kpi"><p class="lbl">Current value</p><p class="val" id="k-value">—</p><p class="sub">Based on your latest prices</p></section>
+    <section class="paper-card kpi"><p class="lbl">Profit / loss</p><p class="val" id="k-pl">—</p><p class="sub">Current value − invested</p></section>
+    <section class="paper-card kpi"><p class="lbl">Overall return</p><p class="val" id="k-ret">—</p><p class="sub">Total P/L ÷ total invested</p></section>
+  </div>
+
+  <div class="grid grid-dash">
+    <div class="span-2"><section class="paper-card panel" style="height:100%">
+      <div class="panel-head"><h2>Holdings</h2><span class="text-xs text-muted">Click a current price to update it</span></div>
+      <div id="holdings"></div>
+    </section></div>
+    <section class="paper-card panel">
+      <div class="panel-head"><h2>Asset allocation</h2><span class="text-xs text-muted">By current value</span></div>
+      <div id="alloc"></div>
+    </section>
+  </div>
+
+  <h2 class="section-title"><span>Financial goals</span><span class="text-sm text-muted" id="goals-sum" style="font-family:var(--font-body,inherit)"></span></h2>
+  <div class="goals-grid" id="goals"></div>
+</main>
+
+<!-- investment add / edit -->
+<div class="overlay" id="inv-ov"><div class="dialog" role="dialog" aria-modal="true">
+  <button class="x" type="button" data-close aria-label="Close">✕</button>
+  <h2 id="inv-title">Add investment</h2>
+  <p class="desc">Prices are in <span data-cur-code></span>. For Fixed Deposits use quantity 1 and enter the principal as buy price.</p>
+  <form id="inv-form" novalidate>
+    <div class="field"><label class="label" for="i-name">Name</label><input class="input" id="i-name" maxlength="100" placeholder="e.g. Reliance Industries, SBI FD"></div>
+    <div class="two field">
+      <div><label class="label" for="i-type">Asset type</label><select class="input" id="i-type">{% for a in asset_types %}<option>{{ a }}</option>{% endfor %}</select></div>
+      <div><label class="label" for="i-date">Purchase date</label><input class="input" id="i-date" type="date"></div>
+    </div>
+    <div class="field"><label class="label" for="i-qty">Quantity / units (grams for gold)</label><input class="input" id="i-qty" type="number" step="any" min="0"></div>
+    <div class="two field">
+      <div><label class="label" for="i-buy">Buy price per unit (<span data-cur-sym></span>)</label><input class="input" id="i-buy" type="number" step="any" min="0"></div>
+      <div><label class="label" for="i-cur">Current price per unit (<span data-cur-sym></span>)</label><input class="input" id="i-cur" type="number" step="any" min="0"></div>
+    </div>
+    <button type="submit" class="btn btn-lg btn-block" id="inv-submit">Save investment</button>
+  </form>
+</div></div>
+
+<!-- update price -->
+<div class="overlay" id="price-ov"><div class="dialog" role="dialog" aria-modal="true">
+  <button class="x" type="button" data-close aria-label="Close">✕</button>
+  <h2>Update current price</h2><p class="desc" id="price-desc"></p>
+  <form id="price-form" novalidate>
+    <div class="field"><label class="label" for="p-val">Current price per unit (<span data-cur-sym></span>)</label><input class="input" id="p-val" type="number" step="any" min="0"></div>
+    <button type="submit" class="btn btn-lg btn-block">Update price</button>
+  </form>
+</div></div>
+
+<!-- goal add / edit -->
+<div class="overlay" id="goal-ov"><div class="dialog" role="dialog" aria-modal="true">
+  <button class="x" type="button" data-close aria-label="Close">✕</button>
+  <h2 id="goal-title">New goal</h2><p class="desc">Amounts are in <span data-cur-code></span>.</p>
+  <form id="goal-form" novalidate>
+    <div class="field"><label class="label" for="g-name">Goal name</label><input class="input" id="g-name" maxlength="100" placeholder="e.g. Emergency fund, New car"></div>
+    <div class="two field">
+      <div><label class="label" for="g-target">Target amount (<span data-cur-sym></span>)</label><input class="input" id="g-target" type="number" step="0.01" min="0"></div>
+      <div><label class="label" for="g-date">Target date</label><input class="input" id="g-date" type="date"></div>
+    </div>
+    <button type="submit" class="btn btn-lg btn-block">Save goal</button>
+  </form>
+</div></div>
+
+<!-- add savings to goal -->
+<div class="overlay" id="c-ov"><div class="dialog" role="dialog" aria-modal="true">
+  <button class="x" type="button" data-close aria-label="Close">✕</button>
+  <h2 id="c-title">Add savings</h2><p class="desc" id="c-desc"></p>
+  <form id="c-form" novalidate>
+    <div class="two field">
+      <div><label class="label" for="c-amt">Amount (<span data-cur-sym></span>)</label><input class="input" id="c-amt" type="number" step="0.01" min="0"></div>
+      <div><label class="label" for="c-date">Date</label><input class="input" id="c-date" type="date"></div>
+    </div>
+    <div class="field"><label class="label" for="c-note">Note (optional)</label><input class="input" id="c-note" maxlength="200"></div>
+    <button type="submit" class="btn btn-lg btn-block">Add savings</button>
+  </form>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const COLORS = ['#5C1A1B', '#7EC8E3', '#D8C3A5', '#4A3B32', '#C65A55', '#4a87b0', '#a98a5a', '#2d5f7a'];
+  const EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+  const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '');
+  const tone = n => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+  const money = n => sign(n) + formatMoney(Math.abs(n));
+  const pctTxt = n => sign(n) + Math.abs(n).toFixed(2) + '%';
+  const fmtDate = iso => iso ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(parseISODate(iso)) : '—';
+  let inv = { items: [], summary: null }, goals = { items: [], summary: null }, pie = null, editInv = null, editGoal = null, priceId = null, cGoal = null;
+
+  /* ---------- investments ---------- */
+  function renderInv() {
+    const s = inv.summary;
+    $('k-invested').textContent = formatMoney(s.invested);
+    $('k-count').textContent = s.count + (s.count === 1 ? ' holding' : ' holdings');
+    $('k-value').textContent = formatMoney(s.value);
+    $('k-pl').textContent = money(s.pl); $('k-pl').className = 'val ' + tone(s.pl);
+    $('k-ret').textContent = pctTxt(s.return_pct); $('k-ret').className = 'val ' + tone(s.return_pct);
+    $('holdings').innerHTML = !inv.items.length
+      ? '<div class="empty-box"><p class="t">No investments yet.</p><p class="text-sm text-muted mt-1">Add stocks, mutual funds, gold, FDs, bonds and more.</p></div>'
+      : `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Investment</th><th class="r">Qty</th><th class="r">Buy price</th><th class="r">Current price</th><th class="r">Invested</th><th class="r">Value</th><th class="r">P/L</th><th class="r">Return</th><th></th></tr></thead><tbody>
+        ${inv.items.map(i => `<tr>
+          <td><div class="nm">${escapeHtml(i.name)}</div><div class="ty">${escapeHtml(i.asset_type)}${i.purchased_on ? ' · ' + fmtDate(i.purchased_on) : ''}</div></td>
+          <td class="r">${Number(i.quantity).toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
+          <td class="r">${formatMoney(i.buy_price)}</td>
+          <td class="r"><button class="linkbtn" data-price="${i.id}" title="Updated ${escapeHtml(i.price_updated_at)} UTC">${formatMoney(i.current_price)}</button></td>
+          <td class="r">${formatMoney(i.invested)}</td><td class="r">${formatMoney(i.value)}</td>
+          <td class="r ${tone(i.pl)}">${money(i.pl)}</td><td class="r ${tone(i.return_pct)}">${pctTxt(i.return_pct)}</td>
+          <td class="r"><span class="acts"><button class="icon-btn edit" data-edit-inv="${i.id}" aria-label="Edit">${EDIT}</button><button class="icon-btn" data-del-inv="${i.id}" aria-label="Delete">${TRASH}</button></span></td></tr>`).join('')}
+        </tbody></table></div>`;
+    renderAlloc(s.allocation);
+  }
+
+  function renderAlloc(a) {
+    if (pie) { pie.destroy(); pie = null; }
+    const wrap = $('alloc');
+    if (!a.length || !a.some(x => x.value > 0)) { wrap.innerHTML = '<div class="empty-box"><p class="text-sm text-muted">Your allocation appears once you add investments.</p></div>'; return; }
+    wrap.innerHTML = `<div class="pie-box"><canvas id="alloc-pie"></canvas></div><ul class="legend mt-4">${a.map((x, i) => `<li><i style="background:${COLORS[i % COLORS.length]}"></i><span class="n text-ink">${escapeHtml(x.asset_type)}</span><span class="tabular text-muted">${formatMoneyShort(x.value)} · ${x.pct.toFixed(1)}%</span></li>`).join('')}</ul>`;
+    pie = new Chart($('alloc-pie'), { type: 'doughnut', data: { labels: a.map(x => x.asset_type), datasets: [{ data: a.map(x => x.value), backgroundColor: a.map((_, i) => COLORS[i % COLORS.length]), borderColor: '#fff', borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${formatMoney(c.parsed)} (${a[c.dataIndex].pct.toFixed(1)}%)` } } } } });
+  }
+
+  /* ---------- goals ---------- */
+  function renderGoals() {
+    const s = goals.summary;
+    $('goals-sum').textContent = s.count ? `${formatMoney(s.saved)} of ${formatMoney(s.target)} saved · ${s.completed}/${s.count} completed` : '';
+    $('goals').innerHTML = !goals.items.length
+      ? '<section class="paper-card panel"><div class="empty-box"><p class="t">No goals yet.</p><p class="text-sm text-muted mt-1">Create a goal with a target amount and date.</p></div></section>'
+      : goals.items.map(g => `<section class="paper-card panel goal">
+        <div class="top"><div><h3>${escapeHtml(g.name)}</h3><p class="meta">Target ${fmtDate(g.target_date)} · ${g.completed ? 'Completed' : g.days_left >= 0 ? g.days_left + ' days left' : 'Overdue by ' + -g.days_left + ' days'}</p></div>
+          <span class="acts">${g.completed ? '<span class="badge done">✓ Completed</span>' : ''}<button class="icon-btn edit" data-edit-goal="${g.id}" aria-label="Edit goal">${EDIT}</button><button class="icon-btn" data-del-goal="${g.id}" aria-label="Delete goal">${TRASH}</button></span></div>
+        <div class="nums"><span class="font-display text-maroon" style="font-size:1.5rem;font-weight:600">${formatMoney(g.saved)}</span><span class="text-sm text-muted">of ${formatMoney(g.target_amount)}</span></div>
+        <div class="bar ${g.completed ? 'done' : ''}"><i style="width:${g.pct}%"></i></div>
+        <div class="mini mt-3"><div>Progress<b>${g.pct.toFixed(1)}%</b></div><div>Remaining<b>${formatMoney(g.remaining)}</b></div></div>
+        <button class="btn btn-sm btn-outline mt-4" data-contrib="${g.id}">+ Add savings</button>
+        ${g.contributions.length ? `<ul class="contribs">${g.contributions.map(c => `<li><span>${fmtDate(c.contributed_on)}${c.note ? ' · ' + escapeHtml(c.note) : ''}</span><span><span class="tabular text-ink" style="font-weight:600">${formatMoney(c.amount)}</span><button class="icon-btn" data-del-c="${c.id}" aria-label="Remove savings entry">${TRASH}</button></span></li>`).join('')}</ul>` : ''}
+      </section>`).join('');
+  }
+
+  async function load() {
+    [inv, goals] = await Promise.all([api('GET', '/api/investments'), api('GET', '/api/goals')]);
+    renderInv(); renderGoals();
+  }
+
+  /* ---------- dialogs ---------- */
+  const open = id => { $(id).classList.add('open'); setTimeout(() => { const f = $(id).querySelector('input'); f && f.focus(); }, 30); };
+  const closeAll = () => document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('mousedown', e => { if (e.target === o) closeAll(); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+
+  function openInv(item) {
+    editInv = item || null;
+    $('inv-title').textContent = item ? 'Edit investment' : 'Add investment';
+    $('i-name').value = item ? item.name : ''; $('i-type').value = item ? item.asset_type : 'Stocks';
+    $('i-date').value = item && item.purchased_on ? item.purchased_on : toISODate(new Date());
+    $('i-qty').value = item ? item.quantity : '';
+    $('i-buy').value = item ? fromBase(item.buy_price) : ''; $('i-cur').value = item ? fromBase(item.current_price) : '';
+    open('inv-ov');
+  }
+  function openGoal(g) {
+    editGoal = g || null;
+    $('goal-title').textContent = g ? 'Edit goal' : 'New goal';
+    $('g-name').value = g ? g.name : ''; $('g-target').value = g ? fromBase(g.target_amount) : ''; $('g-date').value = g ? g.target_date : '';
+    open('goal-ov');
+  }
+  const notifyDone = (r, name) => { if (r && r.completed) toast('🎉 Goal completed: ' + name + '!', 'success'); };
+
+  document.addEventListener('click', async e => {
+    const t = sel => e.target.closest(sel);
+    let b;
+    try {
+      if (t('[data-close]')) return closeAll();
+      if (t('#add-inv')) return openInv();
+      if (t('#add-goal')) return openGoal();
+      if ((b = t('[data-edit-inv]'))) return openInv(inv.items.find(i => i.id == b.dataset.editInv));
+      if ((b = t('[data-price]'))) {
+        const i = inv.items.find(x => x.id == b.dataset.price); priceId = i.id;
+        $('price-desc').textContent = `${i.name} · ${i.quantity} units`; $('p-val').value = fromBase(i.current_price); return open('price-ov');
+      }
+      if ((b = t('[data-del-inv]'))) { if (!confirm('Delete this investment?')) return; await api('DELETE', '/api/investments/' + b.dataset.delInv); toast('Investment deleted', 'success'); return load(); }
+      if ((b = t('[data-edit-goal]'))) return openGoal(goals.items.find(g => g.id == b.dataset.editGoal));
+      if ((b = t('[data-del-goal]'))) { if (!confirm('Delete this goal and its savings entries?')) return; await api('DELETE', '/api/goals/' + b.dataset.delGoal); toast('Goal deleted', 'success'); return load(); }
+      if ((b = t('[data-del-c]'))) { await api('DELETE', '/api/contributions/' + b.dataset.delC); toast('Savings entry removed', 'success'); return load(); }
+      if ((b = t('[data-contrib]'))) {
+        cGoal = goals.items.find(g => g.id == b.dataset.contrib);
+        $('c-title').textContent = 'Add savings · ' + cGoal.name; $('c-desc').textContent = formatMoney(cGoal.remaining) + ' to go';
+        $('c-amt').value = ''; $('c-note').value = ''; $('c-date').value = toISODate(new Date()); return open('c-ov');
+      }
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  function submit(formId, fn) {
+    $(formId).addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = $(formId).querySelector('button[type=submit]'); btn.disabled = true;
+      try { await fn(); closeAll(); await load(); } catch (err) { toast(err.message, 'error'); }
+      btn.disabled = false;
+    });
+  }
+  const need = (v, msg) => { if (v === '' || !(Number(v) >= 0)) throw new Error(msg); return Number(v); };
+
+  submit('inv-form', async () => {
+    const qty = need($('i-qty').value, 'Enter a quantity');
+    if (!(qty > 0)) throw new Error('Quantity must be above 0');
+    const body = { name: $('i-name').value.trim(), asset_type: $('i-type').value, purchased_on: $('i-date').value || null, quantity: qty,
+      buy_price: toBase(need($('i-buy').value, 'Enter a buy price')), current_price: toBase(need($('i-cur').value, 'Enter a current price')) };
+    if (!body.name) throw new Error('Enter a name');
+    if (editInv) await api('PUT', '/api/investments/' + editInv.id, body); else await api('POST', '/api/investments', body);
+    toast(editInv ? 'Investment updated' : 'Investment added', 'success');
+  });
+  submit('price-form', async () => {
+    await api('PATCH', `/api/investments/${priceId}/price`, { current_price: toBase(need($('p-val').value, 'Enter a price')) });
+    toast('Price updated', 'success');
+  });
+  submit('goal-form', async () => {
+    const target = need($('g-target').value, 'Enter a target amount');
+    if (!(target > 0)) throw new Error('Target must be above 0');
+    const body = { name: $('g-name').value.trim(), target_amount: toBase(target), target_date: $('g-date').value };
+    if (!body.name) throw new Error('Enter a goal name');
+    if (!body.target_date) throw new Error('Pick a target date');
+    if (editGoal) notifyDone(await api('PUT', '/api/goals/' + editGoal.id, body), body.name); else await api('POST', '/api/goals', body);
+    toast(editGoal ? 'Goal updated' : 'Goal created', 'success');
+  });
+  submit('c-form', async () => {
+    const amt = need($('c-amt').value, 'Enter an amount');
+    if (!(amt > 0)) throw new Error('Amount must be above 0');
+    const r = await api('POST', `/api/goals/${cGoal.id}/contributions`, { amount: toBase(amt), contributed_on: $('c-date').value, note: $('c-note').value.trim() });
+    toast('Savings added', 'success'); notifyDone(r, cGoal.name);
+  });
+
+  load().catch(err => toast(err.message, 'error'));
+})();
+</script>
+{% endblock %}

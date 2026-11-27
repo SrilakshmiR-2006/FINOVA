@@ -16,6 +16,7 @@
   <div id="toasts"></div>
   {% block body %}{% endblock %}
   <script>
+    window.__CURRENCY__ = {{ {"code": currency, "rates": rates.rates, "live": rates.live} | tojson }};
     window.__FLASH__ = {{ get_flashed_messages(with_categories=true) | tojson }};
   </script>
   <script src="{{ url_for('static', filename='js/common.js') }}"></script>

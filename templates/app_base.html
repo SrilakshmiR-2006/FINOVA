@@ -7,9 +7,15 @@
       {{ brand() }}
       <nav class="nav">
         <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">{{ icon('dash') }}<span class="lbl">Dashboard</span></a>
+        <a href="{{ url_for('wealth') }}" class="{{ 'active' if request.endpoint == 'wealth' }}">{{ icon('wallet') }}<span class="lbl">Investments &amp; Goals</span></a>
         <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' }}">{{ icon('user') }}<span class="lbl">Profile</span></a>
         {% if me and me['is_admin'] %}
         <a href="{{ url_for('admin') }}" class="{{ 'active' if request.endpoint == 'admin' }}">{{ icon('shield') }}<span class="lbl">Admin</span></a>
+        {% endif %}
+        {% if me %}
+        <select id="currency-select" class="cur-select" aria-label="Display currency" title="{{ 'Live rates' if rates.live else 'Offline rates' }}">
+          {% for code, name in currencies.items() %}<option value="{{ code }}" {{ 'selected' if code == currency }}>{{ code }}</option>{% endfor %}
+        </select>
         {% endif %}
         <form method="post" action="{{ url_for('logout') }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}">

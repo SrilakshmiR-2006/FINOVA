@@ -1,7 +1,8 @@
 # FINOVA — Flask + HTML/CSS/JS version
 
 Finance analytics & budget tracking: income / expenses / savings, finance score,
-charts, calendar, profile and admin overview. Same screens, rules and look as the original.
+charts, calendar, monthly & yearly budgets with alerts, investment portfolio,
+financial goals, currency conversion, profile and admin overview. Same screens, rules and look as the original.
 
 ## Run in VS Code
 ```
@@ -25,3 +26,16 @@ python -m pytest tests        # optional: run the finance-rule tests
 - Put your real logo at `static/img/finova-logo.jpg` — it is used automatically (an SVG fallback is included).
 - Charts use Chart.js and fonts come from Google Fonts (internet needed for those two).
 - Set `FINOVA_SECRET` to a long random string before deploying anywhere public.
+
+## New in this version
+- **Investments & Goals page** (`/wealth`): add / edit / delete holdings (Stocks, Mutual Funds, Gold,
+  Fixed Deposits, Bonds, Crypto, Real Estate, Other), update current prices, see invested amount,
+  current value, profit/loss and return % per holding and overall, plus an asset-allocation chart.
+- **Goals**: name, target amount, target date; add or remove savings entries; saved / remaining /
+  progress bar; edit and delete; a notification appears when a goal is completed.
+- **Dashboard**: total expenses, monthly & yearly budget, remaining budget, budget alerts (80% and
+  over budget), expense trends, portfolio value, returns, allocation and goal progress.
+- **Currency switcher** in the header (USD, INR, EUR, GBP, JPY, AED, CAD, AUD, SGD). Amounts are stored
+  in USD and converted with live rates (refreshed every 6 hours); built-in rates are used offline
+  (or set `FINOVA_OFFLINE=1`). Your choice is saved to your account.
+- Existing `finova.db` files are upgraded automatically on start — no data is lost.

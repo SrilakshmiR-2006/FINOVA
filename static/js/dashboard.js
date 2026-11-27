@@ -244,11 +244,11 @@
     const raw = $('t-amount').value, amount = Number(raw);
     if (raw === '') return toast('Enter an amount', 'error');
     if (!(amount > 0)) return toast('Amount must be above 0', 'error');
-    if (amount > 1e9) return toast('Amount is too large', 'error');
+    if (toBase(amount) > 1e9) return toast('Amount is too large', 'error');
     if (!$('t-date').value) return toast('Pick a date', 'error');
     const btn = $('dlg-submit'); btn.disabled = true; const label = btn.textContent; btn.textContent = 'Saving…';
     try {
-      await api('POST', '/api/transactions', { type: dlgType, amount, category: $('t-cat').value, occurred_on: $('t-date').value, note: $('t-note').value.trim() });
+      await api('POST', '/api/transactions', { type: dlgType, amount: toBase(amount), category: $('t-cat').value, occurred_on: $('t-date').value, note: $('t-note').value.trim() });
       toast(META[dlgType].toast + ' added', 'success');
       closeDialog();
       await load();
@@ -256,6 +256,67 @@
     btn.disabled = false; btn.textContent = label;
   });
 
-  async function load() { txns = await api('GET', '/api/transactions'); render(); }
+  /* ---------- budget, portfolio, goals ---------- */
+  let budget = null, pf = null, gl = null, pfChart = null;
+  const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : ''), tn = n => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+  function budgetRow(label, b) {
+    if (b.level === 'none') return `<div class="bud-row"><div class="r"><span class="text-ink" style="font-weight:600">${label}</span><span class="text-muted">Not set · spent ${formatMoney(b.spent)}</span></div></div>`;
+    return `<div class="bud-row"><div class="r"><span class="text-ink" style="font-weight:600">${label}</span><span class="tabular">${formatMoney(b.spent)} / ${formatMoney(b.budget)}</span></div>
+      <div class="bar ${b.level}"><i style="width:${Math.min(100, b.pct)}%"></i></div>
+      <div class="r mt-1 text-xs"><span class="text-muted">${b.pct.toFixed(1)}% used</span><span class="${b.remaining < 0 ? 'neg' : 'text-muted'}" style="font-weight:600">${b.remaining < 0 ? formatMoney(-b.remaining) + ' over' : formatMoney(b.remaining) + ' left'}</span></div></div>`;
+  }
+  function renderExtras() {
+    if (budget) {
+      $('budget-panel').innerHTML = `<div class="panel-head"><h2>Budget</h2><button class="btn btn-sm btn-outline" id="edit-budget">Set budget</button></div>
+        <div class="mini" style="margin-bottom:1rem"><div>Total expenses (all time)<b>${formatMoney(budget.total_expenses)}</b></div><div>Spent this year<b>${formatMoney(budget.yearly.spent)}</b></div></div>
+        ${budgetRow('This month', budget.monthly)}${budgetRow('This year', budget.yearly)}`;
+      const alerts = [['monthly', 'monthly'], ['yearly', 'yearly']].map(([k, w]) => { const b = budget[k];
+        return b.level === 'over' ? `<div class="alert over">⚠ You're over your ${w} budget by ${formatMoney(-b.remaining)} (${b.pct.toFixed(0)}% used).</div>`
+          : b.level === 'warn' ? `<div class="alert warn">Heads up: you've used ${b.pct.toFixed(0)}% of your ${w} budget — ${formatMoney(b.remaining)} left.</div>` : ''; }).join('');
+      const done = gl ? gl.items.filter(g => g.completed).map(g => `<div class="alert good">🎉 Goal completed: ${escapeHtml(g.name)} (${formatMoney(g.target_amount)})</div>`).join('') : '';
+      $('budget-alerts').innerHTML = alerts + done;
+    }
+    if (pf) {
+      const s = pf.summary;
+      if (pfChart) { pfChart.destroy(); pfChart = null; }
+      $('portfolio-panel').innerHTML = `<div class="panel-head"><h2>Investments</h2><a class="text-xs link-maroon" href="/wealth">Manage →</a></div>
+        ${!s.count ? '<div class="empty-box"><p class="t">No investments yet.</p><p class="text-sm text-muted mt-1"><a class="link-maroon" href="/wealth">Add your first holding</a></p></div>' : `
+        <p class="font-display text-maroon" style="font-size:1.75rem;font-weight:600">${formatMoney(s.value)}</p>
+        <p class="text-sm"><span class="${tn(s.pl)}" style="font-weight:600">${sgn(s.pl)}${formatMoney(Math.abs(s.pl))} (${sgn(s.return_pct)}${Math.abs(s.return_pct).toFixed(2)}%)</span> <span class="text-muted">on ${formatMoney(s.invested)} invested</span></p>
+        <div class="pie-box" style="height:10rem;margin-top:1rem"><canvas id="pf-pie"></canvas></div>
+        <ul class="legend mt-3">${s.allocation.map((a, i) => `<li><i style="background:${PIE_COLORS[i % PIE_COLORS.length]}"></i><span class="n text-ink">${escapeHtml(a.asset_type)}</span><span class="tabular text-muted">${a.pct.toFixed(1)}%</span></li>`).join('')}</ul>`}`;
+      if (s.count && s.value > 0) pfChart = new Chart($('pf-pie'), { type: 'doughnut', data: { labels: s.allocation.map(a => a.asset_type), datasets: [{ data: s.allocation.map(a => a.value), backgroundColor: s.allocation.map((_, i) => PIE_COLORS[i % PIE_COLORS.length]), borderColor: '#fff', borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${formatMoney(c.parsed)}` } } } } });
+    }
+    if (gl) {
+      const s = gl.summary;
+      $('goals-panel').innerHTML = `<div class="panel-head"><h2>Financial goals</h2><a class="text-xs link-maroon" href="/wealth">Manage →</a></div>
+        ${!s.count ? '<div class="empty-box"><p class="t">No goals yet.</p><p class="text-sm text-muted mt-1"><a class="link-maroon" href="/wealth">Create a goal</a></p></div>' : `
+        <div class="mini" style="margin-bottom:.5rem"><div>Overall progress<b>${s.pct.toFixed(1)}%</b></div><div>Completed<b>${s.completed} / ${s.count}</b></div></div>
+        ${gl.items.slice(0, 5).map(g => `<div class="bud-row"><div class="r"><span class="text-ink" style="font-weight:600">${escapeHtml(g.name)} ${g.completed ? '<span class="badge done">✓</span>' : ''}</span><span class="tabular text-muted">${formatMoneyShort(g.saved)} / ${formatMoneyShort(g.target_amount)}</span></div><div class="bar ${g.completed ? 'ok' : ''}"><i style="width:${g.pct}%"></i></div></div>`).join('')}`}`;
+    }
+  }
+  const bOverlay = $('budget-overlay');
+  document.addEventListener('click', e => {
+    if (e.target.closest('#edit-budget')) {
+      $('b-month').value = budget.monthly.budget ? fromBase(budget.monthly.budget) : '';
+      $('b-year').value = budget.yearly.budget ? fromBase(budget.yearly.budget) : '';
+      bOverlay.classList.add('open');
+    }
+  });
+  $('budget-close').addEventListener('click', () => bOverlay.classList.remove('open'));
+  bOverlay.addEventListener('mousedown', e => { if (e.target === bOverlay) bOverlay.classList.remove('open'); });
+  $('budget-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const m = Number($('b-month').value || 0), y = Number($('b-year').value || 0);
+    if (!(m >= 0 && y >= 0)) return toast('Budgets must be 0 or more', 'error');
+    try { budget = await api('POST', '/api/budget', { monthly_budget: toBase(m), yearly_budget: toBase(y) }); bOverlay.classList.remove('open'); toast('Budget saved', 'success'); renderExtras(); }
+    catch (err) { toast(err.message, 'error'); }
+  });
+
+  async function load() {
+    const [t, b, p, g] = await Promise.all([api('GET', '/api/transactions'), api('GET', '/api/budget'), api('GET', '/api/investments'), api('GET', '/api/goals')]);
+    txns = t; budget = b; pf = p; gl = g; render(); renderExtras();
+  }
   load().catch(err => toast(err.message, 'error'));
 })();

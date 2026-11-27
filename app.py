@@ -56,6 +56,38 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS transactions_user_date_idx ON transactions (user_id, occurred_on DESC);
+CREATE TABLE IF NOT EXISTS investments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  asset_type TEXT NOT NULL,
+  quantity REAL NOT NULL CHECK (quantity > 0),
+  buy_price REAL NOT NULL CHECK (buy_price >= 0),
+  current_price REAL NOT NULL CHECK (current_price >= 0),
+  purchased_on TEXT,
+  price_updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS investments_user_idx ON investments (user_id);
+CREATE TABLE IF NOT EXISTS goals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  target_amount REAL NOT NULL CHECK (target_amount > 0),
+  target_date TEXT NOT NULL,
+  completed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS goals_user_idx ON goals (user_id);
+CREATE TABLE IF NOT EXISTS goal_contributions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  goal_id INTEGER NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount REAL NOT NULL CHECK (amount > 0),
+  contributed_on TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS reset_tokens (
   token TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -87,11 +119,41 @@ def close_db(_exc):
 def init_db():
     db = sqlite3.connect(DB_PATH)
     db.executescript(SCHEMA)
+    # Add new user columns to databases created by older versions (keeps existing data).
+    cols = {r[1] for r in db.execute("PRAGMA table_info(users)")}
+    for col, ddl in (("monthly_budget", "REAL NOT NULL DEFAULT 0"),
+                     ("yearly_budget", "REAL NOT NULL DEFAULT 0"),
+                     ("currency", "TEXT NOT NULL DEFAULT 'USD'")):
+        if col not in cols:
+            db.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
     db.commit()
     db.close()
 
 
 init_db()
+
+
+# ---------------------------------------------------------------- currency rates
+_rates_cache = {"at": 0.0, "rates": dict(fin.FALLBACK_RATES), "live": False}
+
+
+def get_rates():
+    """Live USD-based rates (cached 6h); falls back to built-in rates when offline."""
+    import json, time, urllib.request
+    if time.time() - _rates_cache["at"] < 6 * 3600:
+        return _rates_cache
+    _rates_cache["at"] = time.time()
+    if os.environ.get("FINOVA_OFFLINE") == "1":
+        return _rates_cache
+    try:
+        with urllib.request.urlopen("https://open.er-api.com/v6/latest/USD", timeout=4) as r:
+            data = json.load(r)
+        live = {k: float(data["rates"][k]) for k in fin.CURRENCIES if k in data.get("rates", {})}
+        if len(live) == len(fin.CURRENCIES):
+            _rates_cache.update(rates=live, live=True)
+    except Exception as exc:  # network down: keep fallback/previous rates
+        print(f"[FINOVA] Using fallback currency rates ({exc})")
+    return _rates_cache
 
 
 # ---------------------------------------------------------------- auth helpers
@@ -118,7 +180,9 @@ def login_required(view):
 
 @app.context_processor
 def inject_globals():
-    return {"me": current_user(), "categories": fin.CATEGORIES,
+    u = current_user()
+    return {"me": u, "categories": fin.CATEGORIES, "currencies": fin.CURRENCIES,
+            "currency": (u["currency"] if u else "USD"), "rates": get_rates(),
             "password_rules": [{"id": i, "label": l} for i, l, _ in fin.PASSWORD_RULES]}
 
 
@@ -282,6 +346,12 @@ def dashboard():
     return render_template("dashboard.html", profile=profile_dict(current_user()))
 
 
+@app.route("/wealth")
+@login_required
+def wealth():
+    return render_template("wealth.html", asset_types=fin.ASSET_TYPES)
+
+
 @app.route("/profile")
 @login_required
 def profile():
@@ -357,7 +427,7 @@ def api_add():
     cur = db.execute(
         "INSERT INTO transactions (user_id, type, amount, category, note, occurred_on) "
         "VALUES (?,?,?,?,?,?)",
-        (current_user()["id"], t, round(amount, 2), category, note, occurred))
+        (current_user()["id"], t, round(amount, 6), category, note, occurred))
     db.commit()
     row = db.execute("SELECT * FROM transactions WHERE id = ?", (cur.lastrowid,)).fetchone()
     return jsonify(txn_dict(row)), 201
@@ -409,8 +479,285 @@ def api_profile():
     return jsonify(ok=True)
 
 
+# ---------------------------------------------------------------- API: shared validation
+class Bad(Exception):
+    pass
+
+
+@app.errorhandler(Bad)
+def _bad(e):
+    return jsonify(error=str(e)), 400
+
+
+def num(d, key, label, lo=0.0, hi=1e12, allow_zero=False):
+    try:
+        v = float(d.get(key))
+    except (TypeError, ValueError):
+        raise Bad(f"Enter {label}")
+    if v != v or v < lo or v > hi or (not allow_zero and v == 0):
+        raise Bad(f"{label.capitalize()} is out of range")
+    return v
+
+
+def text(d, key, label, maxlen=100):
+    v = str(d.get(key) or "").strip()
+    if not v:
+        raise Bad(f"Enter {label}")
+    return v[:maxlen]
+
+
+def iso_date(d, key, label, required=True):
+    v = str(d.get(key) or "")
+    if not v and not required:
+        return None
+    try:
+        if not DATE_RE.match(v):
+            raise ValueError
+        date.fromisoformat(v)
+    except ValueError:
+        raise Bad(f"Pick {label}")
+    return v
+
+
+def uid():
+    return current_user()["id"]
+
+
+# ---------------------------------------------------------------- API: investments
+def inv_dict(r):
+    d = {k: r[k] for k in ("id", "name", "asset_type", "quantity", "buy_price", "current_price",
+                           "purchased_on", "price_updated_at")}
+    d.update(fin.investment_metrics(r))
+    return d
+
+
+@app.get("/api/investments")
+@login_required
+def api_investments():
+    rows = get_db().execute("SELECT * FROM investments WHERE user_id = ? ORDER BY created_at DESC, id DESC",
+                            (uid(),)).fetchall()
+    return jsonify(items=[inv_dict(r) for r in rows], summary=fin.portfolio_summary(rows))
+
+
+def inv_fields(d):
+    asset = str(d.get("asset_type") or "")
+    if asset not in fin.ASSET_TYPES:
+        raise Bad("Pick an asset type")
+    return (text(d, "name", "a name"), asset, num(d, "quantity", "a quantity"),
+            num(d, "buy_price", "a buy price", allow_zero=True),
+            num(d, "current_price", "a current price", allow_zero=True),
+            iso_date(d, "purchased_on", "a purchase date", required=False))
+
+
+@app.post("/api/investments")
+@login_required
+def api_inv_add():
+    f = inv_fields(request.get_json(silent=True) or {})
+    db = get_db()
+    cur = db.execute("INSERT INTO investments (user_id, name, asset_type, quantity, buy_price, current_price, "
+                     "purchased_on) VALUES (?,?,?,?,?,?,?)", (uid(), *f))
+    db.commit()
+    return jsonify(inv_dict(db.execute("SELECT * FROM investments WHERE id = ?", (cur.lastrowid,)).fetchone())), 201
+
+
+@app.put("/api/investments/<int:iid>")
+@login_required
+def api_inv_edit(iid):
+    f = inv_fields(request.get_json(silent=True) or {})
+    db = get_db()
+    cur = db.execute("UPDATE investments SET name=?, asset_type=?, quantity=?, buy_price=?, current_price=?, "
+                     "purchased_on=?, price_updated_at=datetime('now') WHERE id=? AND user_id=?", (*f, iid, uid()))
+    db.commit()
+    if not cur.rowcount:
+        return jsonify(error="Investment not found"), 404
+    return jsonify(ok=True)
+
+
+@app.patch("/api/investments/<int:iid>/price")
+@login_required
+def api_inv_price(iid):
+    price = num(request.get_json(silent=True) or {}, "current_price", "a current price", allow_zero=True)
+    db = get_db()
+    cur = db.execute("UPDATE investments SET current_price=?, price_updated_at=datetime('now') "
+                     "WHERE id=? AND user_id=?", (price, iid, uid()))
+    db.commit()
+    if not cur.rowcount:
+        return jsonify(error="Investment not found"), 404
+    return jsonify(ok=True)
+
+
+@app.delete("/api/investments/<int:iid>")
+@login_required
+def api_inv_delete(iid):
+    db = get_db()
+    db.execute("DELETE FROM investments WHERE id = ? AND user_id = ?", (iid, uid()))
+    db.commit()
+    return jsonify(ok=True)
+
+
+# ---------------------------------------------------------------- API: goals
+def goals_payload():
+    db = get_db()
+    goals = db.execute("SELECT * FROM goals WHERE user_id = ? ORDER BY target_date, id", (uid(),)).fetchall()
+    contribs = db.execute("SELECT * FROM goal_contributions WHERE user_id = ? "
+                          "ORDER BY contributed_on DESC, id DESC", (uid(),)).fetchall()
+    out = []
+    for g_ in goals:
+        mine = [dict(id=c["id"], amount=c["amount"], contributed_on=c["contributed_on"], note=c["note"])
+                for c in contribs if c["goal_id"] == g_["id"]]
+        prog = fin.goal_progress(g_["target_amount"], sum(c["amount"] for c in mine))
+        days_left = (date.fromisoformat(g_["target_date"]) - date.today()).days
+        out.append({"id": g_["id"], "name": g_["name"], "target_amount": g_["target_amount"],
+                    "target_date": g_["target_date"], "completed_at": g_["completed_at"],
+                    "days_left": days_left, "contributions": mine, **prog})
+    t_target = sum(x["target_amount"] for x in out)
+    t_saved = sum(min(x["saved"], x["target_amount"]) for x in out)
+    return {"items": out, "summary": {"count": len(out), "completed": sum(x["completed"] for x in out),
+                                      "target": round(t_target, 2), "saved": round(t_saved, 2),
+                                      "pct": round(min(100.0, fin.pct(t_saved, t_target)), 2)}}
+
+
+def sync_goal_completion(db, gid):
+    """Stamp/clear completed_at; returns True when this change just completed the goal."""
+    g_ = db.execute("SELECT * FROM goals WHERE id = ?", (gid,)).fetchone()
+    saved = db.execute("SELECT COALESCE(SUM(amount),0) FROM goal_contributions WHERE goal_id = ?", (gid,)).fetchone()[0]
+    done = fin.goal_progress(g_["target_amount"], saved)["completed"]
+    if done and not g_["completed_at"]:
+        db.execute("UPDATE goals SET completed_at = datetime('now') WHERE id = ?", (gid,))
+        return True
+    if not done and g_["completed_at"]:
+        db.execute("UPDATE goals SET completed_at = NULL WHERE id = ?", (gid,))
+    return False
+
+
+def own_goal(gid):
+    g_ = get_db().execute("SELECT * FROM goals WHERE id = ? AND user_id = ?", (gid, uid())).fetchone()
+    if not g_:
+        abort(404)
+    return g_
+
+
+@app.get("/api/goals")
+@login_required
+def api_goals():
+    return jsonify(goals_payload())
+
+
+def goal_fields(d):
+    return (text(d, "name", "a goal name"), num(d, "target_amount", "a target amount"),
+            iso_date(d, "target_date", "a target date"))
+
+
+@app.post("/api/goals")
+@login_required
+def api_goal_add():
+    f = goal_fields(request.get_json(silent=True) or {})
+    db = get_db()
+    db.execute("INSERT INTO goals (user_id, name, target_amount, target_date) VALUES (?,?,?,?)", (uid(), *f))
+    db.commit()
+    return jsonify(ok=True), 201
+
+
+@app.put("/api/goals/<int:gid>")
+@login_required
+def api_goal_edit(gid):
+    own_goal(gid)
+    f = goal_fields(request.get_json(silent=True) or {})
+    db = get_db()
+    db.execute("UPDATE goals SET name=?, target_amount=?, target_date=? WHERE id=?", (*f, gid))
+    just_done = sync_goal_completion(db, gid)
+    db.commit()
+    return jsonify(ok=True, completed=just_done)
+
+
+@app.delete("/api/goals/<int:gid>")
+@login_required
+def api_goal_delete(gid):
+    own_goal(gid)
+    db = get_db()
+    db.execute("DELETE FROM goals WHERE id = ?", (gid,))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.post("/api/goals/<int:gid>/contributions")
+@login_required
+def api_goal_contribute(gid):
+    own_goal(gid)
+    d = request.get_json(silent=True) or {}
+    amount = num(d, "amount", "an amount", hi=1e10)
+    on = iso_date(d, "contributed_on", "a date")
+    note = (str(d.get("note") or "").strip()[:200]) or None
+    db = get_db()
+    db.execute("INSERT INTO goal_contributions (goal_id, user_id, amount, contributed_on, note) VALUES (?,?,?,?,?)",
+               (gid, uid(), round(amount, 6), on, note))
+    just_done = sync_goal_completion(db, gid)
+    db.commit()
+    return jsonify(ok=True, completed=just_done), 201
+
+
+@app.delete("/api/contributions/<int:cid>")
+@login_required
+def api_contrib_delete(cid):
+    db = get_db()
+    row = db.execute("SELECT goal_id FROM goal_contributions WHERE id = ? AND user_id = ?", (cid, uid())).fetchone()
+    if row:
+        db.execute("DELETE FROM goal_contributions WHERE id = ?", (cid,))
+        sync_goal_completion(db, row["goal_id"])
+        db.commit()
+    return jsonify(ok=True)
+
+
+# ---------------------------------------------------------------- API: budget, currency, summary
+def budget_payload():
+    u = current_user()
+    today = date.today()
+    db = get_db()
+    m = db.execute("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE user_id=? AND type='expense' "
+                   "AND substr(occurred_on,1,7)=?", (u["id"], today.strftime("%Y-%m"))).fetchone()[0]
+    y = db.execute("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE user_id=? AND type='expense' "
+                   "AND substr(occurred_on,1,4)=?", (u["id"], str(today.year))).fetchone()[0]
+    total = db.execute("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE user_id=? AND type='expense'",
+                       (u["id"],)).fetchone()[0]
+    return {"monthly": fin.budget_status(m, u["monthly_budget"]),
+            "yearly": fin.budget_status(y, u["yearly_budget"]), "total_expenses": round(total, 2)}
+
+
+@app.get("/api/budget")
+@login_required
+def api_budget():
+    return jsonify(budget_payload())
+
+
+@app.post("/api/budget")
+@login_required
+def api_budget_set():
+    d = request.get_json(silent=True) or {}
+    monthly = num(d, "monthly_budget", "a monthly budget", allow_zero=True)
+    yearly = num(d, "yearly_budget", "a yearly budget", allow_zero=True)
+    db = get_db()
+    db.execute("UPDATE users SET monthly_budget=?, yearly_budget=? WHERE id=?", (monthly, yearly, uid()))
+    db.commit()
+    g.pop("user", None)
+    return jsonify(budget_payload())
+
+
+@app.post("/api/currency")
+@login_required
+def api_currency():
+    code = str((request.get_json(silent=True) or {}).get("currency", ""))
+    if code not in fin.CURRENCIES:
+        return jsonify(error="Unsupported currency"), 400
+    db = get_db()
+    db.execute("UPDATE users SET currency=? WHERE id=?", (code, uid()))
+    db.commit()
+    return jsonify(ok=True)
+
+
 @app.errorhandler(404)
 def not_found(_e):
+    if request.path.startswith("/api/"):
+        return jsonify(error="Not found"), 404
     return render_template("404.html"), 404
 
 

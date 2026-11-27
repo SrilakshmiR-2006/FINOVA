@@ -28,10 +28,10 @@
     <div class="dotted-rule"></div>
 
     <h2 style="margin-top:1.5rem">Income &amp; goals</h2>
-    <p class="text-sm text-muted">All amounts in US dollars.</p>
+    <p class="text-sm text-muted">All amounts in <span data-cur-code></span>.</p>
     <div class="fields">
-      <div class="field"><label class="label" for="monthly">Monthly income ($)</label><input class="input" id="monthly" type="number" min="0" step="0.01" value="{{ p.monthly_income or '' }}"></div>
-      <div class="field"><label class="label" for="daily">Daily income ($)</label><input class="input" id="daily" type="number" min="0" step="0.01" value="{{ p.daily_income or '' }}"></div>
+      <div class="field"><label class="label" for="monthly">Monthly income (<span data-cur-sym></span>)</label><input class="input" id="monthly" type="number" min="0" step="0.01" value="{{ p.monthly_income or '' }}"></div>
+      <div class="field"><label class="label" for="daily">Daily income (<span data-cur-sym></span>)</label><input class="input" id="daily" type="number" min="0" step="0.01" value="{{ p.daily_income or '' }}"></div>
       <div class="field full">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem"><label class="label" style="margin:0" for="goal">Goal of savings</label><span class="goal-badge" id="goal-badge"></span></div>
         <input id="goal" type="range" min="0" max="100" step="1" value="{{ p.savings_goal_pct | int }}">
@@ -46,11 +46,12 @@
 (function () {
   const $ = id => document.getElementById(id);
   const email = {{ p.email | tojson }};
+  ['monthly', 'daily'].forEach(id => { if ($(id).value) $(id).value = fromBase($(id).value); });
   function sync() {
     const goal = Number($('goal').value), monthly = Number($('monthly').value || 0), name = $('name').value;
     $('goal-badge').textContent = goal + '%';
     $('side-goal').textContent = goal + '%';
-    $('side-target').textContent = formatMoney(monthly * goal / 100);
+    $('side-target').textContent = formatMoney(toBase(monthly) * goal / 100);
     $('side-name').textContent = name || 'Your name';
     const age = ageFromDob($('dob').value || null);
     $('age').value = age == null ? '' : age;
@@ -70,7 +71,7 @@
     const btn = $('save-btn'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
       await api('POST', '/api/profile', { full_name: name, dob: $('dob').value || null, phone: $('phone').value.trim() || null,
-        monthly_income: Number($('monthly').value || 0), daily_income: Number($('daily').value || 0), savings_goal_pct: Number($('goal').value) });
+        monthly_income: toBase($('monthly').value || 0), daily_income: toBase($('daily').value || 0), savings_goal_pct: Number($('goal').value) });
       toast('Profile saved', 'success');
     } catch (err) { toast(err.message, 'error'); }
     btn.disabled = false; btn.textContent = 'Save profile';
